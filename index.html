@@ -3,83 +3,63 @@
 <head>
   <title>Ward-wise Heat Priority</title>
 
-  <!-- Local Leaflet files -->
   <link rel="stylesheet" href="leaflet.css">
   <script src="leaflet.js"></script>
   <script src="shp.min.js"></script>
 
   <style>
     body { margin:0; display:flex; font-family:Arial; }
-    #map { width:75%; height:100vh; }
+    #map-container { position:relative; width:75%; height:100vh; }
+    #map { width:100%; height:100%; }
+
     #panel {
       width:25%;
       padding:12px;
-      overflow-y:auto;
       border-left:1px solid #ccc;
       background:#fafafa;
+      overflow-y:auto;
     }
-    .ward { padding:8px; border-bottom:1px solid #ddd; }
-    button { width:100%; margin-top:10px; padding:8px; }
 
-    /* Ward name labels */
     .ward-label {
-      font-size: 11px;
-      font-weight: bold;
-      color: #000;
-      background: rgba(255,255,255,0.7);
-      border: none;
-      box-shadow: none;
-      text-align: center;
-    }#map-container {
-  position: relative;
-  width: 75%;
-  height: 100vh;
-}
+      font-size:10px;
+      font-weight:600;
+      background:rgba(255,255,255,0.6);
+      padding:1px 3px;
+      border-radius:3px;
+    }
 
-#map {
-  width: 100%;
-  height: 100%;
-}
+    #shade-bar {
+      position:absolute;
+      bottom:30px;
+      left:15px;
+      width:40px;
+      height:220px;
+      background:white;
+      border-radius:6px;
+      padding:6px;
+      box-shadow:0 0 6px rgba(0,0,0,0.3);
+      font-size:11px;
+      font-weight:bold;
+      z-index:1000;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+    }
 
-/* Shade bar */
-#shade-bar {
-  position: absolute;
-  bottom: 30px;
-  left: 15px;
-  width: 40px;
-  height: 220px;
-  background: white;
-  border-radius: 6px;
-  padding: 6px;
-  box-shadow: 0 0 6px rgba(0,0,0,0.3);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  font-size: 11px;
-  font-weight: bold;
-}
-
-.shade-top,
-.shade-bottom {
-  text-align: center;
-  margin: 4px 0;
-}
-
-.shade-gradient {
-  flex: 1;
-  width: 100%;
-  margin: 4px 0;
-  border-radius: 4px;
-
-  /* SAME gradient logic as map colors */
-  background: linear-gradient(
-    to bottom,
-    rgb(255, 0, 50),
-    rgb(255, 120, 80),
-    rgb(255, 220, 140)
-  );
-}
-
+    .shade-gradient {
+      flex:1;
+      width:100%;
+      margin:4px 0;
+      border-radius:4px;
+      background: linear-gradient(
+        to bottom,
+        rgb(255,0,0),
+        rgb(200,50,50),
+        rgb(150,90,90),
+        rgb(100,120,120),
+        rgb(0,153,150)
+      );
+    }
   </style>
 </head>
 
@@ -87,142 +67,118 @@
 
 <div id="map-container">
   <div id="map"></div>
-
-  <!-- Shade indicator -->
   <div id="shade-bar">
-    <div class="shade-top">Highest</div>
+    <div>Highest</div>
     <div class="shade-gradient"></div>
-    <div class="shade-bottom">Low</div>
+    <div>Low</div>
   </div>
 </div>
 
-
 <div id="panel">
-  <h3>Ward Priority List</h3>
+  <h3>Ward Priority</h3>
   <input type="file" id="upload" accept=".zip"><br><br>
+
+  <h4>What-If: Increase Green Cover</h4>
+  <input type="range" id="greenSlider" min="0" max="30" value="0">
+  <span id="greenValue">0%</span><br><br>
+
   <button id="pdfBtn">Download Top-10 PDF</button>
   <div id="list"></div>
 </div>
 
 <script>
-/* ---------------- MAP INIT ---------------- */
-const map = L.map("map").setView([23.03, 72.58], 11);
+/* ---------- BASE MAPS ---------- */
+const street = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png");
+const satellite = L.tileLayer("https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}", {subdomains:["mt0","mt1","mt2","mt3"]});
+const terrain = L.tileLayer("https://{s}.google.com/vt/lyrs=p&x={x}&y={y}&z={z}", {subdomains:["mt0","mt1","mt2","mt3"]});
+const dark = L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png");
 
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  attribution: "© OpenStreetMap"
-}).addTo(map);
+/* ---------- MAP ---------- */
+const map = L.map("map", {
+  center:[23.03,72.58],
+  zoom:11,
+  layers:[street]
+});
 
 const wardGroup = L.layerGroup().addTo(map);
 
+L.control.layers(
+  {Street:street, Satellite:satellite, Terrain:terrain, Dark:dark},
+  {"Ward Priority": wardGroup},
+  {collapsed:false}
+).addTo(map);
 
-
-/* ---------------- COLOR SCALE ---------------- */
-function getColor(v) {
-  // clamp value between 0 and 1
-  v = Math.max(0, Math.min(1, v));
-
-  // smooth gradient: yellow → red → dark purple
-  const r = Math.round(255 * v);
-  const g = Math.round(255 * (1 - v) * 0.6);
-  const b = Math.round(150 * (1 - v));
-
-  return `rgb(${r}, ${g}, ${b})`;
+/* ---------- COLOR ---------- */
+function getColor(v){
+  v=Math.max(0,Math.min(1,v));
+  return `rgb(${255*v},${255*(1-v)*0.6},${150*(1-v)})`;
 }
 
-let lastGeoJSON = null;
+/* ---------- AI WINDOW ---------- */
+async function openAIExplanation(props){
+  const res = await fetch("http://localhost:8000/explain-ward",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify(props)
+  });
+  const data = await res.json();
 
-/* ---------------- SHAPEFILE UPLOAD ---------------- */
-document.getElementById("upload").addEventListener("change", async e => {
-  const buffer = await e.target.files[0].arrayBuffer();
-  const geojson = await shp(buffer);
+  const w = window.open("","_blank","width=650,height=500");
+  w.document.write(`<h2>${data.ward_name}</h2><pre>${data.analysis}</pre>`);
+}
+
+/* ---------- LOAD DATA ---------- */
+let lastGeoJSON=null;
+
+document.getElementById("upload").onchange = async e => {
+  const geojson = await shp(await e.target.files[0].arrayBuffer());
   lastGeoJSON = geojson;
 
-  const res = await fetch("http://localhost:8000/ward-priority", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ geojson })
+  const res = await fetch("http://localhost:8000/ward-priority",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({geojson})
   });
 
   const data = await res.json();
-
   wardGroup.clearLayers();
 
-  const layer = L.geoJSON(data, {
-    style: f => ({
-      color: "#333",
-      weight: 0.6,
-      fillColor: getColor(f.properties.p75 || 0),
-      fillOpacity: 0.75
+  const layer = L.geoJSON(data,{
+    style:f=>({
+      color:"#333",
+      weight:0.6,
+      fillColor:getColor(f.properties.p75||0),
+      fillOpacity:0.75
     }),
-    onEachFeature: (f, l) => {
-
-      // Popup
-      l.bindPopup(
-        `<b>Ward:</b> ${f.properties.ward_name}<br>
-         <b>Priority:</b> ${(f.properties.p75 || 0).toFixed(2)}`
-      );
-
-      // Ward name on map
-      l.bindTooltip(
-        f.properties.ward_name || "Unnamed",
-        {
-          permanent: true,
-          direction: "center",
-          className: "ward-label"
-        }
-      );
+    onEachFeature:(f,l)=>{
+      l.bindTooltip(f.properties.ward_name,{permanent:true,className:"ward-label"});
+      l.on("dblclick",()=>openAIExplanation(f.properties));
+      l.on("mouseover",()=>l.setStyle({weight:2}));
+      l.on("mouseout",()=>l.setStyle({weight:0.6}));
     }
   });
 
   wardGroup.addLayer(layer);
   map.fitBounds(layer.getBounds());
 
-  // Side panel list
-  const list = document.getElementById("list");
-  list.innerHTML = "";
+  document.getElementById("list").innerHTML =
+    data.features
+      .sort((a,b)=>b.properties.p75-a.properties.p75)
+      .map(f=>`<div><b>${f.properties.ward_name}</b> – ${f.properties.p75.toFixed(2)}</div>`)
+      .join("");
+};
 
-  data.features
-    .sort((a,b) => (b.properties.p75 || 0) - (a.properties.p75 || 0))
-    .forEach(f => {
-      list.innerHTML += `
-        <div class="ward">
-          <b>${f.properties.ward_name}</b><br>
-          Priority: ${(f.properties.p75 || 0).toFixed(2)}
-        </div>`;
-    });
-
-  // Hide labels at low zoom
-  map.on("zoomend", () => {
-    const z = map.getZoom();
-    layer.eachLayer(l => {
-      if (z >= 12) l.openTooltip();
-      else l.closeTooltip();
+/* ---------- WHAT-IF ---------- */
+const slider=document.getElementById("greenSlider");
+slider.oninput=()=>{
+  document.getElementById("greenValue").innerText=slider.value+"%";
+  wardGroup.eachLayer(g=>{
+    g.eachLayer(l=>{
+      const base=l.feature.properties.p75||0;
+      l.setStyle({fillColor:getColor(Math.max(0,base-slider.value*0.01))});
     });
   });
-});
-
-/* ---------------- PDF DOWNLOAD ---------------- */
-document.getElementById("pdfBtn").onclick = async () => {
-  if (!lastGeoJSON) {
-    alert("Upload wards first");
-    return;
-  }
-
-  const res = await fetch("http://localhost:8000/top10-pdf", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ geojson: lastGeoJSON })
-  });
-
-  const data = await res.json();
-  console.log(data.features[0].properties);
-  const a = document.createElement("a");
-  a.href = "http://localhost:8000/" + data.file;
-  a.download = "Top10_Wards.pdf";
-  a.click();
-
 };
 </script>
-
 </body>
 </html>
