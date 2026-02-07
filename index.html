@@ -1,11 +1,116 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+  <title>Ward-wise Heat Priority</title>
+
+  <link rel="stylesheet" href="./leaflet.css"/>
+  <script src="./leaflet.js"></script>
+  <script src="./shp.min.js"></script>
+
+  <style>
+    body { margin:0; display:flex; font-family:Arial; }
+    #map { width:75%; height:100vh; }
+    #panel {
+      width:25%; padding:12px; overflow-y:auto;
+      border-left:1px solid #ccc; background:#fafafa;
+    }
+    .ward { padding:8px; border-bottom:1px solid #ddd; }
+    button { width:100%; margin-top:10px; padding:8px; }
+  </style>
 </head>
+
 <body>
-    <h1>PlantX : a place where we grow plants wisel  udaoifdhaofjdoafjdoiky</h1>
+
+<div id="map"></div>
+
+<div id="panel">
+  <h3>Ward Priority List</h3>
+  <input type="file" id="upload" accept=".zip"><br><br>
+  <button id="pdfBtn">Download Top‑10 PDF</button>
+  <div id="list"></div>
+</div>
+
+<script>
+const map = L.map("map").setView([23.03, 72.58], 11);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+const wardGroup = L.layerGroup().addTo(map);
+
+function getColor(v) {
+  if (v >= 0.75) return "#800026";
+  if (v >= 0.6)  return "#e31a1c";
+  if (v >= 0.45) return "#fd8d3c";
+  if (v >= 0.3)  return "#feb24c";
+  return "#c7e9b4";
+}
+
+let lastGeoJSON = null;
+
+document.getElementById("upload").addEventListener("change", async e => {
+  const buffer = await e.target.files[0].arrayBuffer();
+  const geojson = await shp(buffer);
+  lastGeoJSON = geojson;
+
+  const res = await fetch("http://localhost:8000/ward-priority", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ geojson })
+  });
+
+  const data = await res.json();
+
+  wardGroup.clearLayers();
+
+  const layer = L.geoJSON(data, {
+    style: f => ({
+      color: "#333",
+      weight: 0.6,
+      fillColor: getColor(f.properties.p75 || 0),
+      fillOpacity: 0.75
+    }),
+    onEachFeature: (f, l) => {
+      l.bindPopup(
+        `<b>Ward:</b> ${f.properties.ward_name}<br>
+         <b>Priority:</b> ${(f.properties.p75 || 0).toFixed(2)}`
+      );
+    }
+  });
+
+  wardGroup.addLayer(layer);
+  map.fitBounds(layer.getBounds());
+
+  const list = document.getElementById("list");
+  list.innerHTML = "";
+
+  data.features
+    .sort((a,b) => (b.properties.p75 || 0) - (a.properties.p75 || 0))
+    .forEach(f => {
+      list.innerHTML += `
+        <div class="ward">
+          <b>${f.properties.ward_name}</b><br>
+          Priority: ${(f.properties.p75 || 0).toFixed(2)}
+        </div>`;
+    });
+});
+
+document.getElementById("pdfBtn").onclick = async () => {
+  if (!lastGeoJSON) {
+    alert("Upload wards first");
+    return;
+  }
+
+  const res = await fetch("http://localhost:8000/top10-pdf", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ geojson: lastGeoJSON })
+  });
+
+  const data = await res.json();
+  const a = document.createElement("a");
+  a.href = "http://localhost:8000/" + data.file;
+  a.download = "Top10_Wards.pdf";
+  a.click();
+};
+</script>
+
 </body>
 </html>
