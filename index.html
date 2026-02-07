@@ -30,13 +30,72 @@
       border: none;
       box-shadow: none;
       text-align: center;
-    }
+    }#map-container {
+  position: relative;
+  width: 75%;
+  height: 100vh;
+}
+
+#map {
+  width: 100%;
+  height: 100%;
+}
+
+/* Shade bar */
+#shade-bar {
+  position: absolute;
+  bottom: 30px;
+  left: 15px;
+  width: 40px;
+  height: 220px;
+  background: white;
+  border-radius: 6px;
+  padding: 6px;
+  box-shadow: 0 0 6px rgba(0,0,0,0.3);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 11px;
+  font-weight: bold;
+}
+
+.shade-top,
+.shade-bottom {
+  text-align: center;
+  margin: 4px 0;
+}
+
+.shade-gradient {
+  flex: 1;
+  width: 100%;
+  margin: 4px 0;
+  border-radius: 4px;
+
+  /* SAME gradient logic as map colors */
+  background: linear-gradient(
+    to bottom,
+    rgb(255, 0, 50),
+    rgb(255, 120, 80),
+    rgb(255, 220, 140)
+  );
+}
+
   </style>
 </head>
 
 <body>
 
-<div id="map"></div>
+<div id="map-container">
+  <div id="map"></div>
+
+  <!-- Shade indicator -->
+  <div id="shade-bar">
+    <div class="shade-top">Highest</div>
+    <div class="shade-gradient"></div>
+    <div class="shade-bottom">Low</div>
+  </div>
+</div>
+
 
 <div id="panel">
   <h3>Ward Priority List</h3>
