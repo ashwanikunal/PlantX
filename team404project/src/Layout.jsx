@@ -1,18 +1,18 @@
-import React from 'react'
-import Header from '../components/header/header'
-import Footer from '../components/footer/footer'
-import { Outlet } from 'react-router-dom'
+import Header from "../components/header/header";
+import Footer from "../components/footer/footer";
+import { Outlet } from "react-router-dom";
 
-function Layout() {
+export default function Layout() {
   return (
-    <div className="min-h-screen flex flex-col bg- dark:bg-black text-black dark:text-white ">
+    <div className="min-h-screen flex flex-col">
       <Header />
-      <main className="flex-1 flex justify-center items-center">
+
+      {/* THIS is the critical line */}
+      <main className="flex-1 flex min-h-screen">
         <Outlet />
       </main>
+
       <Footer />
     </div>
-  )
+  );
 }
-
-export default Layout

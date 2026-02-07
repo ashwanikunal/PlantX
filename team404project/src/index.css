@@ -1,7 +1,12 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-/* Enable scroll but hide scrollbar */
+
+html, body, #root {
+  height: 100%;
+  padding: none;
+  margin: none;
+}
 html, body {
   overflow-y: scroll;
 }
@@ -19,4 +24,9 @@ html, body {
 /* Hide scrollbar for Internet Explorer */
 html, body {
   -ms-overflow-style: none;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
 }
