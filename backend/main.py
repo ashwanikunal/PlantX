@@ -25,13 +25,8 @@ class WardRequest(BaseModel):
 # ---------------- HELPERS ----------------
 def extract_ward_name(props):
     priority_keys = [
-        "ward_lgd_n",   # ✅ BEST for your dataset
-        "ward_name",
-        "WARD_NAME",
-        "WARDNAME",
-        "WARDNM",
-        "NAME",
-        "sourceward"
+        "sourceward",
+        "sourcewa_1",
     ]
 
     for key in priority_keys:
