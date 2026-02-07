@@ -170,7 +170,7 @@ Limit to 120 words.
         analysis = response.choices[0].message.content
 
     except Exception as e:
-        print("🔥 DEEPSEEK ERROR:", e)
+        print(" DEEPSEEK ERROR:", e)
         analysis = (
             f"{ward_name} shows elevated heat vulnerability due to high surface "
             f"temperatures, dense urban development, and limited vegetation. "
