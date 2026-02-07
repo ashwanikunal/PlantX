@@ -2,9 +2,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from fpdf import FPDF
-import ee, geemap
+import ee, geemap, uuid
 
-# ---------------- APP ----------------
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
@@ -13,23 +12,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ---------------- EE INIT ----------------
-try:
-    ee.Initialize()
-except:
-    ee.Authenticate()
-    ee.Initialize()
+# Initialize Earth Engine (auth done once manually)
+ee.Initialize()
 
-# ---------------- MODEL ----------------
 class WardRequest(BaseModel):
     geojson: dict
 
-# ---------------- HELPERS ----------------
 def extract_ward_name(props):
-    for key in [
-        "ward_name", "WARD_NAME", "WARDNAME",
-        "WARD", "Ward", "NAME", "Name"
-    ]:
+    for key in ["ward_name","WARD_NAME","WARD","Name","NAME"]:
         if key in props and isinstance(props[key], str):
             return props[key]
     return "Unknown Ward"
@@ -37,14 +27,10 @@ def extract_ward_name(props):
 def geojson_to_ee(geojson):
     feats = []
     for f in geojson["features"]:
-        props = f.get("properties", {})
-        name = extract_ward_name(props)
-        feats.append(
-            ee.Feature(f["geometry"], {"ward_name": name})
-        )
+        name = extract_ward_name(f.get("properties", {}))
+        feats.append(ee.Feature(f["geometry"], {"ward_name": name}))
     return ee.FeatureCollection(feats)
 
-# ---------------- CORE LOGIC ----------------
 def compute_priority(wards):
     lst = (
         ee.ImageCollection("MODIS/061/MOD11A1")
@@ -66,45 +52,34 @@ def compute_priority(wards):
 
     pop = ee.ImageCollection("WorldPop/GP/100m/pop").mean()
 
-    priority = (
+    return (
         lst.unitScale(30, 48).pow(1.4).multiply(0.5)
         .add(pop.unitScale(0, 5000).pow(1.3).multiply(0.3))
         .add(ee.Image(1).subtract(ndvi).pow(1.2).multiply(0.2))
     ).clip(wards.geometry())
 
-    return priority
-
-# ---------------- API: MAP DATA ----------------
 @app.post("/ward-priority")
 def ward_priority(req: WardRequest):
     wards = geojson_to_ee(req.geojson)
     priority = compute_priority(wards)
-
     out = priority.reduceRegions(
-        collection=wards,
-        reducer=ee.Reducer.percentile([75]),
-        scale=500
+        wards, ee.Reducer.percentile([75]), 500
     )
-
     return geemap.ee_to_geojson(out)
 
-# ---------------- API: TOP 10 PDF ----------------
 @app.post("/top10-pdf")
 def top10_pdf(req: WardRequest):
     wards = geojson_to_ee(req.geojson)
     priority = compute_priority(wards)
 
     out = priority.reduceRegions(
-        collection=wards,
-        reducer=ee.Reducer.percentile([75]),
-        scale=500
+        wards, ee.Reducer.percentile([75]), 500
     )
-
     data = geemap.ee_to_geojson(out)
 
     top10 = sorted(
         data["features"],
-        key=lambda f: f["properties"]["p75"],
+        key=lambda f: f["properties"].get("p75", 0),
         reverse=True
     )[:10]
 
@@ -117,11 +92,10 @@ def top10_pdf(req: WardRequest):
     for i, f in enumerate(top10, 1):
         pdf.cell(
             0, 8,
-            f"{i}. {f['properties']['ward_name']} | Priority: {f['properties']['p75']:.2f}",
+            f"{i}. {f['properties']['ward_name']} | Priority: {f['properties'].get('p75',0):.2f}",
             ln=True
         )
 
-    file_path = "top10_wards.pdf"
+    file_path = f"top10_wards_{uuid.uuid4().hex[:6]}.pdf"
     pdf.output(file_path)
-
     return {"file": file_path}
