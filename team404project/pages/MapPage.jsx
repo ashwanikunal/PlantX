@@ -1,13 +1,18 @@
 import { useState, useRef } from "react";
 import globe from "../src/assets/globe.png";
 
+import { useNavigate } from "react-router-dom";
+
+
+
 export default function MapPage() {
   const [city, setCity] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const containerRef = useRef(null);
 
   const cities = ["Delhi", "Ahmedabad", "Nagpur", "Gurgaon", "Mumbai"];
-
+   
+const navigate = useNavigate();
   // close dropdown when clicking outside
   const handleBlur = (e) => {
     if (!containerRef.current.contains(e.relatedTarget)) {
@@ -23,12 +28,12 @@ export default function MapPage() {
       >
         {/* LEFT : Globe */}
         <div className="flex-shrink-0">
-          <img src={globe} alt="Globe" className="w-[260px] opacity-80" />
+          <img src={globe} alt="Globe" className="w-[380px] opacity-80" />
         </div>
 
         {/* RIGHT : Content */}
         <div className="flex flex-col gap-10 relative">
-          <h1 className="text-3xl font-semibold text-green-900 tracking-wide">
+          <h1 className="text-4xl font-semibold text-green-900 tracking-wide">
             Choose your city 🗺️
           </h1>
 
@@ -63,11 +68,17 @@ export default function MapPage() {
               </div>
             )}
           </div>
-
+                
           {/* Button */}
-          <button className="bg-black text-white px-8 py-2 shadow-md hover:opacity-90 transition w-fit">
-            Enter
-          </button>
+          <button
+  className="bg-black text-white px-8 py-2 shadow-md hover:opacity-90 transition w-fit"
+  onClick={() => {
+    if (city) navigate("/timeline");
+  }}
+>
+  Enter
+</button>
+
         </div>
       </div>
     </div>
