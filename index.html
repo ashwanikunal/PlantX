@@ -3,19 +3,34 @@
 <head>
   <title>Ward-wise Heat Priority</title>
 
-  <link rel="stylesheet" href="./leaflet.css"/>
-  <script src="./leaflet.js"></script>
-  <script src="./shp.min.js"></script>
+  <!-- Local Leaflet files -->
+  <link rel="stylesheet" href="leaflet.css">
+  <script src="leaflet.js"></script>
+  <script src="shp.min.js"></script>
 
   <style>
     body { margin:0; display:flex; font-family:Arial; }
     #map { width:75%; height:100vh; }
     #panel {
-      width:25%; padding:12px; overflow-y:auto;
-      border-left:1px solid #ccc; background:#fafafa;
+      width:25%;
+      padding:12px;
+      overflow-y:auto;
+      border-left:1px solid #ccc;
+      background:#fafafa;
     }
     .ward { padding:8px; border-bottom:1px solid #ddd; }
     button { width:100%; margin-top:10px; padding:8px; }
+
+    /* Ward name labels */
+    .ward-label {
+      font-size: 11px;
+      font-weight: bold;
+      color: #000;
+      background: rgba(255,255,255,0.7);
+      border: none;
+      box-shadow: none;
+      text-align: center;
+    }
   </style>
 </head>
 
@@ -26,15 +41,21 @@
 <div id="panel">
   <h3>Ward Priority List</h3>
   <input type="file" id="upload" accept=".zip"><br><br>
-  <button id="pdfBtn">Download Top‑10 PDF</button>
+  <button id="pdfBtn">Download Top-10 PDF</button>
   <div id="list"></div>
 </div>
 
 <script>
+/* ---------------- MAP INIT ---------------- */
 const map = L.map("map").setView([23.03, 72.58], 11);
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  attribution: "© OpenStreetMap"
+}).addTo(map);
+
 const wardGroup = L.layerGroup().addTo(map);
 
+/* ---------------- COLOR SCALE ---------------- */
 function getColor(v) {
   if (v >= 0.75) return "#800026";
   if (v >= 0.6)  return "#e31a1c";
@@ -45,6 +66,7 @@ function getColor(v) {
 
 let lastGeoJSON = null;
 
+/* ---------------- SHAPEFILE UPLOAD ---------------- */
 document.getElementById("upload").addEventListener("change", async e => {
   const buffer = await e.target.files[0].arrayBuffer();
   const geojson = await shp(buffer);
@@ -68,9 +90,21 @@ document.getElementById("upload").addEventListener("change", async e => {
       fillOpacity: 0.75
     }),
     onEachFeature: (f, l) => {
+
+      // Popup
       l.bindPopup(
         `<b>Ward:</b> ${f.properties.ward_name}<br>
          <b>Priority:</b> ${(f.properties.p75 || 0).toFixed(2)}`
+      );
+
+      // Ward name on map
+      l.bindTooltip(
+        f.properties.ward_name || "Unnamed",
+        {
+          permanent: true,
+          direction: "center",
+          className: "ward-label"
+        }
       );
     }
   });
@@ -78,6 +112,7 @@ document.getElementById("upload").addEventListener("change", async e => {
   wardGroup.addLayer(layer);
   map.fitBounds(layer.getBounds());
 
+  // Side panel list
   const list = document.getElementById("list");
   list.innerHTML = "";
 
@@ -90,8 +125,18 @@ document.getElementById("upload").addEventListener("change", async e => {
           Priority: ${(f.properties.p75 || 0).toFixed(2)}
         </div>`;
     });
+
+  // Hide labels at low zoom
+  map.on("zoomend", () => {
+    const z = map.getZoom();
+    layer.eachLayer(l => {
+      if (z >= 12) l.openTooltip();
+      else l.closeTooltip();
+    });
+  });
 });
 
+/* ---------------- PDF DOWNLOAD ---------------- */
 document.getElementById("pdfBtn").onclick = async () => {
   if (!lastGeoJSON) {
     alert("Upload wards first");
@@ -105,10 +150,12 @@ document.getElementById("pdfBtn").onclick = async () => {
   });
 
   const data = await res.json();
+  console.log(data.features[0].properties);
   const a = document.createElement("a");
   a.href = "http://localhost:8000/" + data.file;
   a.download = "Top10_Wards.pdf";
   a.click();
+
 };
 </script>
 
