@@ -58,11 +58,11 @@ export default function HomePage() {
             </button>
           </div>
 
-          <div className="flex flex-wrap justify-center gap-6 mt-16 text-md text-gray-600">
+          {/* <div className="flex flex-wrap justify-center gap-6 mt-16 text-md text-gray-600">
             <span> City-wise analysis</span>
             <span> Heat & green cover</span>
             <span> Smart plantation zones</span>
-          </div>
+          </div> */}
         </div>
 
         <div className="absolute bottom-6 w-full text-center text-gray-500 animate-bounce">
@@ -70,12 +70,9 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ================= MISSION SLIDER ================= */}
       <section
         ref={missionRef}
-        className="relative w-full min-h-[90vh] bg-[#f7f6f4] overflow-hidden flex items-center"
-      >
-        {/* fixed background */}
+        className="relative w-full min-h-[90vh] bg-[#f7f6f4] overflow-hidden flex items-center">
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
@@ -114,7 +111,6 @@ export default function HomePage() {
               </p>
             </div>
 
-            {/* SLIDE 2 */}
             <div
               className={`absolute inset-0 transition-opacity duration-500 ${
                 slide === 1 ? "opacity-100" : "opacity-0 pointer-events-none"
@@ -128,22 +124,18 @@ export default function HomePage() {
                 <div className="bg-white/90 p-8 rounded-xl shadow-lg">
                   <h3 className="font-semibold mb-3">Clear information</h3>
                   <p className="text-gray-600 text-sm leading-relaxed">
-                    Convert scattered data into clear, visual insights.
-                  </p>
+When information is scattered, confusing, or incomplete, people rely on guesswork or outside opinions.  We collect relevant details and present them in a simple visual form so you can actually understand the situation you are dealing with.                  </p>
                 </div>
 
                 <div className="bg-white/90 p-8 rounded-xl shadow-lg">
                   <h3 className="font-semibold mb-3">Better decisions</h3>
                   <p className="text-gray-600 text-sm leading-relaxed">
-                    Make informed, calm, and confident choices.
-                  </p>
+                    Once things are clear, choosing becomes easier.  You can compare options calmly, think logically, and decide based on understanding instead of pressure, urgency, or assumptions.</p>
                 </div>
-
                 <div className="bg-white/90 p-8 rounded-xl shadow-lg">
                   <h3 className="font-semibold mb-3">Better outcomes</h3>
                   <p className="text-gray-600 text-sm leading-relaxed">
-                    Long-term impact through smarter actions.
-                  </p>
+Decisions made with clarity usually avoid costly mistakes and regret.  Whether planning, investing, or acting on the ground, informed choices lead to results that last longer and work better over time.                  </p>
                 </div>
               </div>
             </div>
@@ -180,3 +172,4 @@ export default function HomePage() {
     </div>
   );
 }
+
