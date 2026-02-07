@@ -55,13 +55,19 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
 
 const wardGroup = L.layerGroup().addTo(map);
 
+
+
 /* ---------------- COLOR SCALE ---------------- */
 function getColor(v) {
-  if (v >= 0.75) return "#800026";
-  if (v >= 0.6)  return "#e31a1c";
-  if (v >= 0.45) return "#fd8d3c";
-  if (v >= 0.3)  return "#feb24c";
-  return "#c7e9b4";
+  // clamp value between 0 and 1
+  v = Math.max(0, Math.min(1, v));
+
+  // smooth gradient: yellow → red → dark purple
+  const r = Math.round(255 * v);
+  const g = Math.round(255 * (1 - v) * 0.6);
+  const b = Math.round(150 * (1 - v));
+
+  return `rgb(${r}, ${g}, ${b})`;
 }
 
 let lastGeoJSON = null;

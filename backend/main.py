@@ -60,59 +60,7 @@ def geojson_to_ee(geojson):
     return ee.FeatureCollection(feats)
 
 # ---------------- CORE LOGIC ----------------
-def compute_priority(wards):
 
-    # ===============================
-    # 1️⃣ Daytime Heat (MODIS)
-    # ===============================
-    lst = (
-        ee.ImageCollection("MODIS/061/MOD11A1")
-        .filterDate("2025-04-01", "2025-06-30")
-        .select("LST_Day_1km")
-        .mean()
-        .multiply(0.02)
-        .subtract(273.15)
-    )
-
-    heat = lst.unitScale(32, 48)
-
-    # ===============================
-    # 2️⃣ Vegetation Deficit (NDVI)
-    # ===============================
-    s2 = (
-        ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
-        .filterDate("2025-01-01", "2025-06-30")
-        .filter(ee.Filter.lt("CLOUDY_PIXEL_PERCENTAGE", 60))
-        .select(["B4", "B8"])
-        .median()
-    )
-
-    ndvi = s2.normalizedDifference(["B8", "B4"])
-    veg_deficit = ee.Image(1).subtract(ndvi).unitScale(0.2, 0.8)
-
-    # ===============================
-    # 3️⃣ Population Exposure
-    # ===============================
-    population = ee.ImageCollection("WorldPop/GP/100m/pop").mean()
-    pop = population.unitScale(0, 7000)
-
-    # ===============================
-    # 4️⃣ Built-up Density
-    # ===============================
-    builtup = ee.Image("ESA/WorldCover/v100/2020").eq(50)
-    builtup_density = builtup.focal_mean(200).unitScale(0, 1)
-
-    # ===============================
-    # 5️⃣ FINAL PRIORITY (NO NORMALIZATION)
-    # ===============================
-    priority = (
-        heat.multiply(0.35)
-        .add(pop.multiply(0.30))
-        .add(builtup_density.multiply(0.20))
-        .add(veg_deficit.multiply(0.15))
-    ).clip(wards.geometry())
-
-    return priority
 
 def compute_priority(wards):
 
