@@ -1,50 +1,81 @@
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
-import bg from "../src/assets/bg.png";
+import { useState, useRef } from "react";
+
 import bg2 from "../src/assets/bg2.png";
+import bg3 from "../src/assets/bg3.png";
 
 export default function HomePage() {
   const navigate = useNavigate();
   const [slide, setSlide] = useState(0);
+  const missionRef = useRef(null);
 
   return (
     <div className="w-full min-h-screen bg-[#faf9fb]">
+
       {/* ================= HERO SECTION ================= */}
-      <section 
-        className="w-full min-h-screen flex items-start justify-center pt-24 md:pt-32"
+      <section
+        className="relative w-full min-h-screen flex items-center justify-center"
         style={{
-          backgroundImage: `url(${bg})`,
+          backgroundImage: `url(${bg3})`,
           backgroundRepeat: "no-repeat",
           backgroundPosition: "center bottom",
           backgroundSize: "cover",
         }}
       >
-        <div className="text-center pb-16">
-          <h1 className="text-3xl md:text-5xl font-semibold tracking-widest text-green-900 mb-10">
+        {/* overlay */}
+        <div className="absolute inset-0 "></div>
+
+        {/* content */}
+        <div className="relative text-center max-w-4xl px-6">
+          <div className="inline-block mb-6 px-4 py-1 text-xs tracking-wider text-green-900 bg-green-100 rounded-full">
+            Data-powered sustainability
+          </div>
+
+          <h1 className="text-4xl md:text-6xl font-bold tracking-widest text-green-900 mb-6">
             GREEN INDIA
           </h1>
 
-          <div className="flex gap-6 pt-16 justify-center">
+          <p className="text-lg md:text-2xl text-gray-700 mb-12 leading-relaxed">
+            <span className="font-semibold">Data-driven </span> insights to build a greener, smarter,
+            and more sustainable India.
+          </p>
+
+          <div className="flex flex-col sm:flex-row justify-center gap-8">
             <button
-              onClick={() => navigate("/getstarted")}
-              className="bg-black text-white px-8 py-3 text-sm font-medium shadow-lg shadow-gray-400 transition"
+              onClick={() => navigate("/login")}
+              className="bg-black text-white px-10 py-4 text-sm font-medium shadow-xl hover:bg-gray-800 transition"
             >
               Get Started
             </button>
 
             <button
-              onClick={() => navigate("#learnmore")}
-              className="bg-[#bab6ac] text-gray-700 px-8 py-3 text-sm font-medium shadow-md hover:bg-gray-100 transition"
+              onClick={() =>
+                missionRef.current?.scrollIntoView({ behavior: "smooth" })
+              }
+              className="bg-[#cfcac0] text-gray-800 px-10 py-4 text-sm font-medium shadow-md hover:bg-[#bfb9ad] transition"
             >
               Learn More
             </button>
           </div>
+
+          <div className="flex flex-wrap justify-center gap-6 mt-16 text-md text-gray-600">
+            <span> City-wise analysis</span>
+            <span> Heat & green cover</span>
+            <span> Smart plantation zones</span>
+          </div>
+        </div>
+
+        <div className="absolute bottom-6 w-full text-center text-gray-500 animate-bounce">
+          ↓
         </div>
       </section>
 
       {/* ================= MISSION SLIDER ================= */}
-      <section class="learnmore" className="relative w-full min-h-[90vh] bg-[#f7f6f4] overflow-hidden flex items-center">
-        {/* FIXED BACKGROUND (never moves) */}
+      <section
+        ref={missionRef}
+        className="relative w-full min-h-[90vh] bg-[#f7f6f4] overflow-hidden flex items-center"
+      >
+        {/* fixed background */}
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
@@ -56,21 +87,17 @@ export default function HomePage() {
           }}
         />
 
-        {/* CONTENT */}
         <div className="relative max-w-6xl mx-auto px-6 text-center w-full">
-          {/* PAGE INDICATOR */}
           <div className="text-sm text-gray-500 mb-10">
             {slide + 1} / 2
           </div>
 
-          {/* SLIDE CONTAINER */}
           <div className="relative min-h-[360px]">
-            {/* -------- SLIDE 1 -------- */}
+
+            {/* SLIDE 1 */}
             <div
-              className={`absolute inset-0 transition-opacity duration-500 ease-in-out ${
-                slide === 0
-                  ? "opacity-100 pointer-events-auto"
-                  : "opacity-0 pointer-events-none"
+              className={`absolute inset-0 transition-opacity duration-500 ${
+                slide === 0 ? "opacity-100" : "opacity-0 pointer-events-none"
               }`}
             >
               <h2 className="text-3xl md:text-5xl font-semibold text-green-900 mb-8">
@@ -78,21 +105,19 @@ export default function HomePage() {
               </h2>
 
               <p className="text-gray-800 text-lg leading-relaxed max-w-2xl mx-auto">
-                🌱 We help people make smarter decisions using clear data and
+                 We help people make smarter decisions using clear data and
                 visual insights.
                 <br />
                 <br />
                 Our platform simplifies complex environmental information so
-                anyone can understand their options and act with confidence.
+                anyone can act with confidence.
               </p>
             </div>
 
-            {/* -------- SLIDE 2 -------- */}
+            {/* SLIDE 2 */}
             <div
-              className={`absolute inset-0 transition-opacity duration-500 ease-in-out ${
-                slide === 1
-                  ? "opacity-100 pointer-events-auto"
-                  : "opacity-0 pointer-events-none"
+              className={`absolute inset-0 transition-opacity duration-500 ${
+                slide === 1 ? "opacity-100" : "opacity-0 pointer-events-none"
               }`}
             >
               <h2 className="text-3xl md:text-5xl font-semibold text-green-900 mb-16">
@@ -103,24 +128,21 @@ export default function HomePage() {
                 <div className="bg-white/90 p-8 rounded-xl shadow-lg">
                   <h3 className="font-semibold mb-3">Clear information</h3>
                   <p className="text-gray-600 text-sm leading-relaxed">
-                    We turn scattered or confusing data into simple visual
-                    insights so you clearly understand the situation.
+                    Convert scattered data into clear, visual insights.
                   </p>
                 </div>
 
                 <div className="bg-white/90 p-8 rounded-xl shadow-lg">
                   <h3 className="font-semibold mb-3">Better decisions</h3>
                   <p className="text-gray-600 text-sm leading-relaxed">
-                    Once things are clear, decisions are made calmly and
-                    confidently — not on assumptions.
+                    Make informed, calm, and confident choices.
                   </p>
                 </div>
 
                 <div className="bg-white/90 p-8 rounded-xl shadow-lg">
                   <h3 className="font-semibold mb-3">Better outcomes</h3>
                   <p className="text-gray-600 text-sm leading-relaxed">
-                    Better decisions reduce costly mistakes and lead to long-
-                    lasting, impactful results.
+                    Long-term impact through smarter actions.
                   </p>
                 </div>
               </div>
@@ -132,10 +154,10 @@ export default function HomePage() {
             <button
               onClick={() => slide > 0 && setSlide(slide - 1)}
               disabled={slide === 0}
-              className={`text-2xl transition ${
-                slide === 0
-                  ? "text-gray-300 cursor-not-allowed"
-                  : "text-gray-700 hover:text-black"
+              className={`w-12 h-12 flex items-center justify-center text-2xl rounded-full transition ${
+                slide === 1
+                  ? "bg-gray-300 text-black"
+                  : "text-gray-400 cursor-not-allowed"
               }`}
             >
               ←
@@ -144,10 +166,10 @@ export default function HomePage() {
             <button
               onClick={() => slide < 1 && setSlide(slide + 1)}
               disabled={slide === 1}
-              className={`w-10 h-10 flex items-center justify-center rounded-full transition ${
-                slide === 1
-                  ? "bg-gray-200 cursor-not-allowed"
-                  : "bg-gray-300 hover:bg-gray-400"
+              className={`w-12 h-12 flex items-center justify-center text-2xl rounded-full transition ${
+                slide === 0
+                  ? "bg-gray-300 text-black"
+                  : "text-gray-400 cursor-not-allowed"
               }`}
             >
               →

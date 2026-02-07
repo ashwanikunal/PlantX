@@ -4,7 +4,7 @@ import logo from "../../src/assets/logo.png";
 
 export default function Header() {
   return (
-    <header className="flex items-center justify-between bg-[#faf9fb] px-6 py-4 shadow-md">
+    <header className="flex items-center justify-between bg-[#fcf8f9]  shadow-md border-b border-gray-400">
       
       {/* Logo */}
       <Link to="/" className="flex items-center ">
@@ -17,7 +17,7 @@ export default function Header() {
       </Link>
 
       {/* Hamburger menu */}
-      <button className="text-gray-800">
+      <button className="text-gray-800 py-2 px-3 rounded-md ">
         <Menu size={22} />
       </button>
 
