@@ -1,38 +1,36 @@
 import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import WardTreeTable from "./WardTreeTable";
+import { useNavigate } from "react-router-dom";
 
 export default function Map() {
   const mapRef = useRef(null);
-  const allWardsLayerRef = useRef(null);
+  const allLayerRef = useRef(null);
   const top10LayerRef = useRef(null);
   const selectedWardRef = useRef(null);
-  const sliderRef = useRef(null);
+  const navigate = useNavigate();
 
-  /* ================= COLOR SCALE ================= */
+  /* ================= COLOR ================= */
   const getColor = (v) => {
     v = Math.max(0, Math.min(1, v));
-    return `rgb(${255 * v}, ${255 * (1 - v) * 0.6}, ${150 * (1 - v)})`;
+    const boosted = Math.pow(v, 0.6);
+    return `rgb(${255 * boosted},${180 * (1 - boosted)},${120 *
+      (1 - boosted)})`;
   };
 
-  /* ================= LABEL VISIBILITY ================= */
-  const toggleLabelsByZoom = (map) => {
-    const zoom = map.getZoom();
-    [allWardsLayerRef.current, top10LayerRef.current].forEach((group) => {
-      if (!group) return;
-      group.eachLayer((geo) => {
-        geo.eachLayer((l) => {
-          if (!l.getTooltip()) return;
-          zoom > 12 ? l.openTooltip() : l.closeTooltip();
-        });
-      });
-    });
-  };
-
-  /* ================= MAP INIT ================= */
+  /* ================= INIT ================= */
   useEffect(() => {
-    const street = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png");
+    const street = L.tileLayer(
+      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+    );
+    const satellite = L.tileLayer(
+      "https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
+      { subdomains: ["mt0", "mt1", "mt2", "mt3"] }
+    );
+    const terrain = L.tileLayer(
+      "https://{s}.google.com/vt/lyrs=p&x={x}&y={y}&z={z}",
+      { subdomains: ["mt0", "mt1", "mt2", "mt3"] }
+    );
     const dark = L.tileLayer(
       "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
     );
@@ -43,49 +41,66 @@ export default function Map() {
       layers: [street],
     });
 
-    const allWardsLayer = L.layerGroup().addTo(map);
-    const top10Layer = L.layerGroup();
-
     mapRef.current = map;
-    allWardsLayerRef.current = allWardsLayer;
+
+    const allLayer = L.layerGroup().addTo(map);
+    const top10Layer = L.layerGroup().addTo(map);
+
+    allLayerRef.current = allLayer;
     top10LayerRef.current = top10Layer;
 
     L.control.layers(
-      { Street: street, Dark: dark },
       {
-        "All Wards (Priority)": allWardsLayer,
-        "Top 10 High Priority Wards": top10Layer,
+        Street: street,
+        Satellite: satellite,
+        Terrain: terrain,
+        Dark: dark,
+      },
+      {
+        "All Wards": allLayer,
+        "Top-10 High Priority": top10Layer,
       },
       { collapsed: false }
     ).addTo(map);
 
-    map.on("zoomend", () => toggleLabelsByZoom(map));
+    map.on("zoomend", () => toggleLabels(map));
 
     loadWardData();
 
     return () => map.remove();
   }, []);
 
-  /* ================= WARD CLICK ================= */
-  const handleWardClick = (layer) => {
-    // reset previous
+  /* ================= LABELS ================= */
+  const toggleLabels = (map) => {
+    const zoom = map.getZoom();
+    [allLayerRef.current, top10LayerRef.current].forEach((group) => {
+      group.eachLayer((geo) =>
+        geo.eachLayer((l) =>
+          zoom > 12 ? l.openTooltip() : l.closeTooltip()
+        )
+      );
+    });
+  };
+
+  /* ================= CLICK ================= */
+  const handleWardClick = (layer, props) => {
     if (selectedWardRef.current) {
       selectedWardRef.current.setStyle({
         weight: selectedWardRef.current._defaultWeight,
       });
     }
 
-    // store default weight once
-    if (!layer._defaultWeight) {
+    if (!layer._defaultWeight)
       layer._defaultWeight = layer.options.weight;
-    }
 
-    layer.setStyle({
-      weight: layer._defaultWeight + 2,
-    });
-
-    layer.bringToFront();
+    layer.setStyle({ weight: layer._defaultWeight + 2 });
     selectedWardRef.current = layer;
+
+    layer.bindPopup(`
+      <b>${props.ward_name}</b><br/>
+      HVI: ${props.p75.toFixed(3)}<br/>
+      Population: ${Math.round(props.population_mean).toLocaleString()}
+    `).openPopup();
   };
 
   /* ================= LOAD DATA ================= */
@@ -98,113 +113,61 @@ export default function Map() {
     const sorted = [...data.features].sort(
       (a, b) => b.properties.p75 - a.properties.p75
     );
-
     const top10 = sorted.slice(0, 10);
 
-    allWardsLayerRef.current.clearLayers();
+    allLayerRef.current.clearLayers();
     top10LayerRef.current.clearLayers();
 
-    /* ---------- ALL WARDS ---------- */
-    const allLayer = L.geoJSON(data.features, {
+    const allGeo = L.geoJSON(data.features, {
       style: (f) => ({
         color: "#444",
         weight: 0.8,
         fillColor: getColor(f.properties.p75),
-        fillOpacity: 0.75,
+        fillOpacity: 0.7,
       }),
       onEachFeature: (f, l) => {
-        l.bindTooltip(f.properties.ward_name, {
-          direction: "center",
-          className: "ward-label",
-        });
-        l.on("click", () => handleWardClick(l));
+        l.bindTooltip(f.properties.ward_name, { direction: "center" });
+        l.on("click", () => handleWardClick(l, f.properties));
       },
     });
 
-    /* ---------- TOP 10 ---------- */
-    const topLayer = L.geoJSON(top10, {
+    const top10Geo = L.geoJSON(top10, {
       style: (f) => ({
         color: "#000",
-        weight: 1.6,
+        weight: 1.8,
         fillColor: getColor(f.properties.p75),
         fillOpacity: 0.9,
       }),
       onEachFeature: (f, l) => {
-        l.bindTooltip(f.properties.ward_name, {
-          direction: "center",
-          className: "ward-label",
-        });
-        l.on("click", () => handleWardClick(l));
+        l.bindTooltip(f.properties.ward_name, { direction: "center" });
+        l.on("click", () => handleWardClick(l, f.properties));
       },
     });
 
-    allWardsLayerRef.current.addLayer(allLayer);
-    top10LayerRef.current.addLayer(topLayer);
-
-    mapRef.current.fitBounds(allLayer.getBounds());
-    toggleLabelsByZoom(mapRef.current);
-
-    document.getElementById("list").innerHTML =
-      top10
-        .map(
-          (f, i) =>
-            `<div><b>${i + 1}. ${f.properties.ward_name}</b> – ${f.properties.p75.toFixed(
-              2
-            )}</div>`
-        )
-        .join("");
-  };
-
-  /* ================= WHAT-IF ================= */
-  const handleSlider = () => {
-    const value = sliderRef.current.value;
-    document.getElementById("greenValue").innerText = value + "%";
-
-    top10LayerRef.current.eachLayer((g) => {
-      g.eachLayer((l) => {
-        const base = l.feature.properties.p75 || 0;
-        l.setStyle({
-          fillColor: getColor(Math.max(0, base - value * 0.01)),
-        });
-      });
-    });
+    allLayerRef.current.addLayer(allGeo);
+    top10LayerRef.current.addLayer(top10Geo);
+    mapRef.current.fitBounds(allGeo.getBounds());
+    toggleLabels(mapRef.current);
   };
 
   return (
-    <div style={{ width: "100vw", height: "100vh" }}>
+    <div style={{ width: "100%", height: "100vh", position: "relative" }}>
       <div id="map" style={{ width: "100%", height: "100%" }} />
 
-      {/* PANEL */}
-      <div style={panelStyle}>
-        <h3>Ahmedabad – Top 10 Wards</h3>
-
-        <h4>What-If: Increase Green Cover</h4>
-        <input
-          type="range"
-          ref={sliderRef}
-          min="0"
-          max="30"
-          defaultValue="0"
-          onInput={handleSlider}
-        />
-        <span id="greenValue">0%</span>
-
-        <div id="list" style={{ marginTop: "10px" }} />
-      <button className="bg-green-400 rounded-md p-2" onClick={() => window.location.href = "/WardTreeTable"}> Show Trees</button>
-      </div>
+      <button
+        onClick={() => navigate("/WardTreeTable")}
+        style={{
+          position: "absolute",
+          top: "200px",
+          right: "20px",
+          padding: "8px 12px",
+          background: "#2ecc71",
+          borderRadius: "6px",
+          zIndex: 1200,
+        }}
+      >
+         Recommend Trees
+      </button>
     </div>
   );
 }
-
-/* ================= STYLES ================= */
-const panelStyle = {
-  position: "absolute",
-  top: "250px",
-  right: "20px",
-  width: "260px",
-  padding: "12px",
-  background: "#fafafa",
-  borderRadius: "8px",
-  boxShadow: "0 0 10px rgba(0,0,0,0.25)",
-  zIndex: 1200,
-};
