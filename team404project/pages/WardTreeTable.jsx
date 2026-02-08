@@ -47,7 +47,7 @@ export default function WardTreeTable() {
     <div className="min-h-screen bg-gray-100 p-6">
       {/* TITLE */}
       <h2 className="text-2xl font-semibold mb-1">
-        Step 3. Choose the right tree species
+        Choose the right tree species
       </h2>
 
       <p className="text-gray-600 mb-4">

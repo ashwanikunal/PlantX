@@ -1,16 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fpdf import FPDF
-from openai import OpenAI
 import ee, geemap, uuid, os, geopandas as gpd
 
-# =====================================================
-# DEEPSEEK CLIENT
-# =====================================================
-deepseek = OpenAI(
-    api_key=os.getenv("DEEPSEEK_API_KEY"),
-    base_url="https://api.deepseek.com"
-)
 
 # =====================================================
 # FASTAPI APP
@@ -127,49 +119,6 @@ def ward_priority():
 
     return geemap.ee_to_geojson(out)
 
-# =====================================================
-# API: AI EXPLANATION
-# =====================================================
-@app.post("/explain-ward")
-def explain_ward_ai(data: dict):
-    ward_name = data.get("ward_name", "Unknown Ward")
-    score = round(data.get("p75", 0), 2)
-
-    prompt = f"""
-You are an urban climate risk expert for Indian cities.
-
-Ward: {ward_name}
-Heat priority score (0–1): {score}
-
-Explain clearly:
-1. What this score indicates
-2. Why this ward is vulnerable
-3. Three realistic mitigation actions for Indian cities
-
-Limit to 120 words.
-"""
-
-    try:
-        response = deepseek.chat.completions.create(
-            model="deepseek-chat",
-            messages=[
-                {"role": "system", "content": "You are an expert climate analyst."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.4
-        )
-
-        analysis = response.choices[0].message.content
-
-    except Exception:
-        analysis = (
-            f"{ward_name} shows elevated heat vulnerability due to high surface "
-            f"temperatures, dense urban development, and limited vegetation. "
-            f"Mitigation should focus on increasing tree cover, cool roofs, "
-            f"and shaded public infrastructure."
-        )
-
-    return {"ward_name": ward_name, "analysis": analysis}
 
 # =====================================================
 # API: TOP 10 PDF
@@ -209,3 +158,6 @@ def top10_pdf():
     pdf.output(file_path)
 
     return {"file": file_path}
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)

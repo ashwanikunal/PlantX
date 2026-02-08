@@ -1,11 +1,13 @@
 import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import tree from "../src/assets/tree.jpeg";
+import { useNavigate } from "react-router-dom";
+import tree from "../src/assets/trees.png";
 
 export default function TreesPlant() {
   const mapRef = useRef(null);
   const treeLayerRef = useRef(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     /* ================= BASE MAPS ================= */
@@ -16,17 +18,14 @@ export default function TreesPlant() {
 
     const satellite = L.tileLayer(
       "https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
-      {
-        subdomains: ["mt0", "mt1", "mt2", "mt3"],
-        attribution: "© Google Satellite",
-      }
+      { subdomains: ["mt0", "mt1", "mt2", "mt3"] }
     );
 
     /* ================= MAP ================= */
     const map = L.map("map", {
       center: [23.03, 72.58],
       zoom: 13,
-      layers: [street], // default layer
+      layers: [street],
     });
 
     mapRef.current = map;
@@ -38,13 +37,8 @@ export default function TreesPlant() {
     /* ================= LAYER CONTROL ================= */
     L.control
       .layers(
-        {
-          Street: street,
-          Satellite: satellite,
-        },
-        {
-          "Tree Locations": treeLayer,
-        },
+        { Street: street, Satellite: satellite },
+        { "Tree Locations": treeLayer },
         { collapsed: false }
       )
       .addTo(map);
@@ -62,9 +56,8 @@ export default function TreesPlant() {
       .then((res) => res.json())
       .then((data) => {
         const geoLayer = L.geoJSON(data, {
-          pointToLayer: (feature, latlng) =>
+          pointToLayer: (_, latlng) =>
             L.marker(latlng, { icon: treeIcon }),
-
           onEachFeature: (feature, layer) => {
             layer.bindPopup(
               `<b>${feature.properties?.name || "Tree Location"}</b>`
@@ -73,15 +66,69 @@ export default function TreesPlant() {
         });
 
         treeLayer.addLayer(geoLayer);
-        map.fitBounds(geoLayer.getBounds());
+        map.fitBounds(geoLayer.getBounds(), { padding: [40, 40] });
       });
 
     return () => map.remove();
   }, []);
 
+  /* ================= LAYOUT ================= */
   return (
-    <div className="w-full h-screen">
-      <div id="map" className="w-full h-full" />
+    <div style={{ display: "flex", width: "100%", height: "100vh" }}>
+      {/* SIDEBAR */}
+      <div
+        style={{
+          width: "300px",
+          background: "#1f2a2e",
+          color: "#fff",
+          padding: "20px",
+        }}
+      >
+        <h3 style={{ marginBottom: "10px", color: "#6ddc8b" }}>
+          Tree Plantation Planner
+        </h3>
+
+        <p style={{ opacity: 0.85 }}>
+          AI-recommended locations where trees can be planted for maximum
+          heat-reduction impact.
+        </p>
+
+        <div
+          style={{
+            marginTop: "20px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "10px",
+          }}
+        >
+          <button onClick={() => navigate("/TreesPlant")} style={btn}>
+            Free / Open area to plant
+          </button>
+
+          <button onClick={() => navigate("/WardTreeTable")} style={btn}>
+            Recommend trees
+          </button>
+
+          <button onClick={() => navigate("/WardTreeTable")} style={btn}>
+            Maintain tree health
+          </button>
+        </div>
+      </div>
+
+      {/* MAP */}
+      <div style={{ flex: 1 }}>
+        <div id="map" style={{ width: "100%", height: "100%" }} />
+      </div>
     </div>
   );
 }
+
+/* ================= BUTTON STYLE ================= */
+const btn = {
+  padding: "10px",
+  background: "#2ecc71",
+  border: "none",
+  borderRadius: "6px",
+  cursor: "pointer",
+  fontWeight: "bold",
+};

@@ -10,20 +10,26 @@ export default function Map() {
   const selectedWardRef = useRef(null);
   const navigate = useNavigate();
 
-  /* ================= COLOR ================= */
-  const getColor = (v) => {
-    v = Math.max(0, Math.min(1, v));
-    const boosted = Math.pow(v, 0.6); // amplifies small differences
-    return `rgb(${255 * boosted}, ${180 * (1 - boosted)}, ${
-      120 * (1 - boosted)
-    })`;
-  };
+  /* ================= COLOR (QUANTILE BASED) ================= */
+ const getColor = (v, breaks) => {
+  let t;
+  if (v >= breaks[4]) t = 1;
+  else if (v >= breaks[3]) t = 0.85;
+  else if (v >= breaks[2]) t = 0.65;
+  else if (v >= breaks[1]) t = 0.4;
+  else t = 0.15;
+
+  /* HSL interpolation */
+  const hue = 120 - 120 * t;     // green → red
+  const light = 85 - 45 * t;     // light → dark
+  const sat = 85;
+
+  return `hsl(${hue}, ${sat}%, ${light}%)`;
+};
 
   /* ================= INIT MAP ================= */
   useEffect(() => {
-    const street = L.tileLayer(
-      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-    );
+    const street = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png");
     const satellite = L.tileLayer(
       "https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
       { subdomains: ["mt0", "mt1", "mt2", "mt3"] }
@@ -52,10 +58,8 @@ export default function Map() {
 
     L.control.layers(
       { Street: street, Satellite: satellite, Terrain: terrain, Dark: dark },
-      {
-        "All Wards": allLayer,
-        "Top-10 High Priority": top10Layer,
-      }
+      { "All Wards": allLayer, "Top-10 High Priority": top10Layer },
+      { collapsed: false }
     ).addTo(map);
 
     map.on("zoomend", () => toggleLabels(map));
@@ -93,10 +97,11 @@ export default function Map() {
     layer.setStyle({ weight: layer._defaultWeight + 2 });
     selectedWardRef.current = layer;
 
+    mapRef.current.fitBounds(layer.getBounds(), { padding: [40, 40] });
+
     layer
       .bindPopup(
-        `<b>${props.ward_name}</b><br/>
-         HVI: ${props.p75.toFixed(3)}`
+        `<b>${props.ward_name}</b><br/>HVI: ${props.p75.toFixed(3)}`
       )
       .openPopup();
   };
@@ -108,6 +113,14 @@ export default function Map() {
     });
     const data = await res.json();
 
+    const values = data.features
+      .map((f) => f.properties.p75)
+      .filter((v) => !isNaN(v))
+      .sort((a, b) => a - b);
+
+    const q = (p) => values[Math.floor(p * values.length)];
+    const breaks = [q(0.2), q(0.4), q(0.6), q(0.8), q(1)];
+
     const sorted = [...data.features].sort(
       (a, b) => b.properties.p75 - a.properties.p75
     );
@@ -116,12 +129,13 @@ export default function Map() {
     allLayerRef.current.clearLayers();
     top10LayerRef.current.clearLayers();
 
+    /* ---------- ALL WARDS ---------- */
     const allGeo = L.geoJSON(data.features, {
       style: (f) => ({
-        color: "#444",
+        color: "#333",
         weight: 0.8,
-        fillColor: getColor(f.properties.p75),
-        fillOpacity: 0.7,
+        fillColor: getColor(f.properties.p75, breaks),
+        fillOpacity: 0.85,
       }),
       onEachFeature: (f, l) => {
         l.bindTooltip(f.properties.ward_name, {
@@ -132,13 +146,21 @@ export default function Map() {
       },
     });
 
+    /* ---------- TOP 10 (FIXED) ---------- */
     const top10Geo = L.geoJSON(top10, {
       style: (f) => ({
         color: "#000",
-        weight: 1.8,
-        fillColor: getColor(f.properties.p75),
-        fillOpacity: 0.9,
+        weight: 2,
+        fillColor: getColor(f.properties.p75, breaks),
+        fillOpacity: 0.95,
       }),
+      onEachFeature: (f, l) => {
+        l.bindTooltip(f.properties.ward_name, {
+          direction: "center",
+          className: "ward-label",
+        });
+        l.on("click", () => handleWardClick(l, f.properties));
+      },
     });
 
     allLayerRef.current.addLayer(allGeo);
@@ -146,78 +168,77 @@ export default function Map() {
 
     mapRef.current.fitBounds(allGeo.getBounds());
     toggleLabels(mapRef.current);
+
+    addLegend(breaks);
   };
+
+  /* ================= LEGEND ================= */
+ const addLegend = (breaks) => {
+  // ✅ remove previous legend if it exists
+  if (legendRef.current) {
+    legendRef.current.remove();
+  }
+
+  const legend = L.control({ position: "bottomleft" });
+
+  legend.onAdd = () => {
+    const div = L.DomUtil.create(
+      "div",
+      "bg-white p-3 text-xs shadow rounded"
+    );
+
+    div.innerHTML = `
+      <div style="font-weight:600; margin-bottom:6px; text-align:center;">
+        Heat Vulnerability Index
+      </div>
+
+      <!-- LOW -->
+      <div style="text-align:center; font-size:10px; margin-bottom:4px;">
+        Low
+      </div>
+
+      <!-- GRADIENT -->
+      <div style="
+        height:140px;
+        width:18px;
+        border-radius:4px;
+        margin: 0 auto;
+        background: linear-gradient(
+          to bottom,
+          hsl(120,85%,85%),
+          hsl(80,85%,70%),
+          hsl(50,85%,58%),
+          hsl(25,85%,48%),
+          hsl(0,85%,40%)
+        );
+      "></div>
+
+      <!-- HIGH -->
+      <div style="text-align:center; font-size:10px; margin-top:4px;">
+        High
+      </div>
+    `;
+
+    return div;
+  };
+
+  legend.addTo(mapRef.current);
+  legendRef.current = legend; // 🔥 store reference
+};
+
 
   /* ================= LAYOUT ================= */
   return (
     <div style={{ display: "flex", width: "100%", height: "100vh" }}>
-      {/* LEFT SIDEBAR */}
-      <div
-        style={{
-          width: "300px",
-          background: "#1f2a2e",
-          color: "#fff",
-          padding: "20px",
-          fontSize: "14px",
-        }}
-      >
-        
-        <p style={{ opacity: 0.85 }}>
-          This tool helps identify high-heat-risk wards and recommends tree
-          species based on environmental conditions.
-        </p>
-<div style={{ marginTop: "20px", display: "flex", flexDirection: "column", gap: "10px" }}>
-  <button
-          onClick={() => navigate("/TreesPlant")}
-          style={{
-            marginTop: "20px",
-            padding: "10px",
-            width: "100%",
-            background: "#2ecc71",
-            border: "none",
-            borderRadius: "6px",
-            cursor: "pointer",
-            fontWeight: "bold",
-          }}
-        >
-    Free / Open area to plant
-  </button>
+      {/* SIDEBAR */}
+      <div style={{ width: "300px", background: "#1f2a2e", color: "#fff", padding: "20px" }}>
+        <p>Identify high-heat-risk wards and optimal tree plantation zones.</p>
 
- <button
-          onClick={() => navigate("/WardTreeTable")}
-          style={{
-            marginTop: "20px",
-            padding: "10px",
-            width: "100%",
-            background: "#2ecc71",
-            border: "none",
-            borderRadius: "6px",
-            cursor: "pointer",
-            fontWeight: "bold",
-          }}
-        >
- Recommend trees
-  </button>
-
-  <button
-          onClick={() => navigate("/WardTreeTable")}
-          style={{
-            marginTop: "20px",
-            padding: "10px",
-            width: "100%",
-            background: "#2ecc71",
-            border: "none",
-            borderRadius: "6px",
-            cursor: "pointer",
-            fontWeight: "bold",
-          }}
-        >
-    Maintain tree health
-  </button>
-</div>
-
-        
-        
+        <div style={{ marginTop: "20px", display: "flex", flexDirection: "column", gap: "10px" }}>
+          <button onClick={() => navigate("/TreesPlant")} style={btn}>Free / Open area to plant</button>
+          <button onClick={() => navigate("/WardTreeTable")} style={btn}>Recommend trees</button>
+          <button onClick={() => navigate("/WardTreeTable")} style={btn}>Maintain tree health</button>
+        </div>
       </div>
 
       {/* MAP */}
@@ -227,3 +248,12 @@ export default function Map() {
     </div>
   );
 }
+
+const btn = {
+  padding: "10px",
+  background: "#2ecc71",
+  border: "none",
+  borderRadius: "6px",
+  cursor: "pointer",
+  fontWeight: "bold",
+};

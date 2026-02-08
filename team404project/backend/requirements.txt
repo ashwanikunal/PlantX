@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+earthengine-api
+geemap
+fpdf
+openai
+geopandas
+shapely
+pyproj
+fiona
