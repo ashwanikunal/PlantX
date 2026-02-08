@@ -7,7 +7,7 @@
 ## 📌 Overview
 
 Urban areas are increasingly affected by **urban heat islands, air pollution, and loss of green cover**.  
-This project provides a **GIS, satelllite-imagery data and AI** that helps identify:
+This project provides a **GIS, satelllite-imagery data and ground level data** that helps identify:
 
 - **Where to plant trees**
 - **Which tree species to plant**
