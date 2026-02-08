@@ -22,7 +22,7 @@ export default function HomePage() {
           backgroundSize: "cover",
         }}
       >
-        {/* overlay */}
+        {/* overlay for readability */}
         <div className="absolute inset-0 "></div>
 
         {/* content */}
@@ -35,15 +35,15 @@ export default function HomePage() {
             GREEN INDIA
           </h1>
 
-          <p className="text-lg md:text-2xl text-gray-700 mb-12 leading-relaxed">
-            <span className="font-semibold">Data-driven </span> insights to build a greener, smarter,
-            and more sustainable India.
+          <p className="text-lg md:text-2xl text-gray-800 mb-12 leading-relaxed">
+            <span className="font-semibold">Data-driven </span>
+            insights to build a greener, smarter, and more sustainable India.
           </p>
 
           <div className="flex flex-col sm:flex-row justify-center gap-8">
             <button
               onClick={() => navigate("/login")}
-              className="bg-black text-white px-10 py-4 text-sm font-medium shadow-xl hover:bg-gray-800 transition"
+              className="bg-black text-white px-10 py-4 text-sm font-medium shadow-xl hover:bg-gray-900 transition"
             >
               Get Started
             </button>
@@ -57,22 +57,20 @@ export default function HomePage() {
               Learn More
             </button>
           </div>
-
-          {/* <div className="flex flex-wrap justify-center gap-6 mt-16 text-md text-gray-600">
-            <span> City-wise analysis</span>
-            <span> Heat & green cover</span>
-            <span> Smart plantation zones</span>
-          </div> */}
         </div>
 
+        {/* scroll cue */}
         <div className="absolute bottom-6 w-full text-center text-gray-500 animate-bounce">
           ↓
         </div>
       </section>
 
+      {/* ================= MISSION SECTION ================= */}
       <section
         ref={missionRef}
-        className="relative w-full min-h-[90vh] bg-[#f7f6f4] overflow-hidden flex items-center">
+        className="relative w-full min-h-[90vh] bg-[#f7f6f4] overflow-hidden flex items-center"
+      >
+        {/* background illustration */}
         <div
           className="absolute inset-0 pointer-events-none"
           style={{
@@ -85,6 +83,7 @@ export default function HomePage() {
         />
 
         <div className="relative max-w-6xl mx-auto px-6 text-center w-full">
+          {/* page indicator */}
           <div className="text-sm text-gray-500 mb-10">
             {slide + 1} / 2
           </div>
@@ -102,15 +101,15 @@ export default function HomePage() {
               </h2>
 
               <p className="text-gray-800 text-lg leading-relaxed max-w-2xl mx-auto">
-                 We help people make smarter decisions using clear data and
+                We help people make smarter decisions using clear data and
                 visual insights.
-                <br />
-                <br />
+                <br /><br />
                 Our platform simplifies complex environmental information so
                 anyone can act with confidence.
               </p>
             </div>
 
+            {/* SLIDE 2 */}
             <div
               className={`absolute inset-0 transition-opacity duration-500 ${
                 slide === 1 ? "opacity-100" : "opacity-0 pointer-events-none"
@@ -124,18 +123,27 @@ export default function HomePage() {
                 <div className="bg-white/90 p-8 rounded-xl shadow-lg">
                   <h3 className="font-semibold mb-3">Clear information</h3>
                   <p className="text-gray-600 text-sm leading-relaxed">
-When information is scattered, confusing, or incomplete, people rely on guesswork or outside opinions.  We collect relevant details and present them in a simple visual form so you can actually understand the situation you are dealing with.                  </p>
+                    When information is scattered or incomplete, people rely on
+                    guesswork. We collect relevant details and present them
+                    visually so the situation becomes easy to understand.
+                  </p>
                 </div>
 
                 <div className="bg-white/90 p-8 rounded-xl shadow-lg">
                   <h3 className="font-semibold mb-3">Better decisions</h3>
                   <p className="text-gray-600 text-sm leading-relaxed">
-                    Once things are clear, choosing becomes easier.  You can compare options calmly, think logically, and decide based on understanding instead of pressure, urgency, or assumptions.</p>
+                    Once things are clear, choices become calmer and logical.
+                    Decisions are made based on understanding, not pressure or
+                    assumptions.
+                  </p>
                 </div>
+
                 <div className="bg-white/90 p-8 rounded-xl shadow-lg">
                   <h3 className="font-semibold mb-3">Better outcomes</h3>
                   <p className="text-gray-600 text-sm leading-relaxed">
-Decisions made with clarity usually avoid costly mistakes and regret.  Whether planning, investing, or acting on the ground, informed choices lead to results that last longer and work better over time.                  </p>
+                    Clear decisions avoid costly mistakes. Informed actions
+                    create long-lasting impact and better results over time.
+                  </p>
                 </div>
               </div>
             </div>
@@ -172,4 +180,3 @@ Decisions made with clarity usually avoid costly mistakes and regret.  Whether
     </div>
   );
 }
-

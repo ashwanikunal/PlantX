@@ -1,10 +1,13 @@
 import { useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+
 
 export default function Timeline() {
   const [month, setMonth] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const [recommendation, setRecommendation] = useState(null);
   const containerRef = useRef(null);
+  const navigate = useNavigate();
 
   const months = [
     "January", "February", "March", "April", "May", "June",
@@ -114,9 +117,13 @@ export default function Timeline() {
 
         {/* ACTION BUTTONS */}
         <div className="flex items-center gap-6">
-          <button className="bg-[#cfdac3] text-green-900 px-8 py-2 shadow-md hover:bg-[#c1cfb3] transition">
-            Check out the organized calendar
-          </button>
+         <button
+  className="bg-[#cfdac3] text-green-900 px-8 py-2 shadow-md hover:bg-[#c1cfb3] transition"
+  onClick={() => navigate("/Calender")}
+>
+  Check out the organized calendar
+</button>
+
 
           <button className="bg-[#d6d6d6] text-gray-800 px-8 py-2 shadow-md hover:bg-[#c8c8c8] transition">
             Skip

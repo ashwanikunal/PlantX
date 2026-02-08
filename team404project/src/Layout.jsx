@@ -2,13 +2,15 @@ import Header from "../components/header/header";
 import Footer from "../components/footer/footer";
 import { Outlet } from "react-router-dom";
 
+
+
 export default function Layout() {
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="flex flex-col min-h-screen">
       <Header />
 
-      {/* THIS is the critical line */}
-      <main className="flex-1 flex min-h-screen">
+      {/* main content */}
+      <main className="flex-1 relative">
         <Outlet />
       </main>
 
@@ -16,3 +18,4 @@ export default function Layout() {
     </div>
   );
 }
+

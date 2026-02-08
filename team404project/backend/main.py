@@ -1,16 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 from fpdf import FPDF
 from openai import OpenAI
-import ee, geemap, uuid, os
+import ee, geemap, uuid, os, geopandas as gpd
 
 # =====================================================
-# DEEPSEEK CLIENT (OPENAI-COMPATIBLE)
+# DEEPSEEK CLIENT
 # =====================================================
-# IMPORTANT:
-# Start FastAPI from a terminal where:
-# $env:DEEPSEEK_API_KEY="sk-xxxx"
 deepseek = OpenAI(
     api_key=os.getenv("DEEPSEEK_API_KEY"),
     base_url="https://api.deepseek.com"
@@ -38,28 +34,29 @@ except Exception:
     ee.Initialize()
 
 # =====================================================
-# MODELS
+# LOAD AHMEDABAD WARDS ONCE
 # =====================================================
-class WardRequest(BaseModel):
-    geojson: dict
+WARD_FILE = "assets/ahmedabad_wards.zip"
 
-# =====================================================
-# HELPERS
-# =====================================================
-def geojson_to_ee(geojson):
+gdf = gpd.read_file(f"zip://{WARD_FILE}")
+gdf = gdf.to_crs(epsg=4326)
+
+def gdf_to_ee(gdf):
     feats = []
-    for f in geojson["features"]:
-        props = f.get("properties", {}).copy()
+    for _, row in gdf.iterrows():
+        geom = ee.Geometry(row.geometry.__geo_interface__)
+        props = row.drop("geometry").to_dict()
         props["ward_name"] = props.get("sourceward", "Ward")
-        feats.append(ee.Feature(f["geometry"], props))
+        feats.append(ee.Feature(geom, props))
     return ee.FeatureCollection(feats)
+
+wards_ee = gdf_to_ee(gdf)
 
 # =====================================================
 # ADVANCED HEAT VULNERABILITY INDEX (HVI)
 # =====================================================
 def compute_priority(wards):
 
-    # -------- Surface Temperature (Day + Night)
     modis = (
         ee.ImageCollection("MODIS/061/MOD11A1")
         .filterDate("2025-04-01", "2025-06-30")
@@ -81,7 +78,6 @@ def compute_priority(wards):
         .unitScale(22, 35)
     )
 
-    # -------- Vegetation Deficit (NDVI)
     s2 = (
         ee.ImageCollection("COPERNICUS/S2_SR_HARMONIZED")
         .filterDate("2025-01-01", "2025-06-30")
@@ -93,14 +89,12 @@ def compute_priority(wards):
     ndvi = s2.normalizedDifference(["B8", "B4"])
     veg_deficit = ee.Image(1).subtract(ndvi).unitScale(0.2, 0.8)
 
-    # -------- Population Exposure
     population = (
         ee.ImageCollection("WorldPop/GP/100m/pop")
         .mean()
         .unitScale(0, 8000)
     )
 
-    # -------- Built-up Density
     builtup = (
         ee.Image("ESA/WorldCover/v100/2020")
         .eq(50)
@@ -108,7 +102,6 @@ def compute_priority(wards):
         .unitScale(0, 1)
     )
 
-    # -------- Final Composite HVI
     priority = (
         lst_day.multiply(0.30)
         .add(lst_night.multiply(0.15))
@@ -120,15 +113,14 @@ def compute_priority(wards):
     return priority
 
 # =====================================================
-# API: MAP DATA
+# API: WARD PRIORITY (AUTO LOAD)
 # =====================================================
 @app.post("/ward-priority")
-def ward_priority(req: WardRequest):
-    wards = geojson_to_ee(req.geojson)
-    priority = compute_priority(wards)
+def ward_priority():
+    priority = compute_priority(wards_ee)
 
     out = priority.reduceRegions(
-        collection=wards,
+        collection=wards_ee,
         reducer=ee.Reducer.percentile([75]),
         scale=250
     )
@@ -136,7 +128,7 @@ def ward_priority(req: WardRequest):
     return geemap.ee_to_geojson(out)
 
 # =====================================================
-# API: AI EXPLANATION (DEEPSEEK)
+# API: AI EXPLANATION
 # =====================================================
 @app.post("/explain-ward")
 def explain_ward_ai(data: dict):
@@ -169,8 +161,7 @@ Limit to 120 words.
 
         analysis = response.choices[0].message.content
 
-    except Exception as e:
-        print(" DEEPSEEK ERROR:", e)
+    except Exception:
         analysis = (
             f"{ward_name} shows elevated heat vulnerability due to high surface "
             f"temperatures, dense urban development, and limited vegetation. "
@@ -178,21 +169,17 @@ Limit to 120 words.
             f"and shaded public infrastructure."
         )
 
-    return {
-        "ward_name": ward_name,
-        "analysis": analysis
-    }
+    return {"ward_name": ward_name, "analysis": analysis}
 
 # =====================================================
 # API: TOP 10 PDF
 # =====================================================
 @app.post("/top10-pdf")
-def top10_pdf(req: WardRequest):
-    wards = geojson_to_ee(req.geojson)
-    priority = compute_priority(wards)
+def top10_pdf():
+    priority = compute_priority(wards_ee)
 
     out = priority.reduceRegions(
-        collection=wards,
+        collection=wards_ee,
         reducer=ee.Reducer.percentile([75]),
         scale=250
     )
@@ -208,13 +195,13 @@ def top10_pdf(req: WardRequest):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", "B", 14)
-    pdf.cell(0, 10, "Top 10 Heat Risk Wards", ln=True)
+    pdf.cell(0, 10, "Top 10 Heat Risk Wards – Ahmedabad", ln=True)
 
     pdf.set_font("Arial", size=11)
     for i, f in enumerate(top10, 1):
         pdf.cell(
             0, 8,
-            f"{i}. {f['properties'].get('ward_name', 'Ward')} – {f['properties']['p75']:.2f}",
+            f"{i}. {f['properties'].get('ward_name')} – {f['properties']['p75']:.2f}",
             ln=True
         )
 
