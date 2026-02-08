@@ -9,6 +9,11 @@ export default function Map() {
   const top10LayerRef = useRef(null);
   const selectedWardRef = useRef(null);
   const navigate = useNavigate();
+  const ndviLayerRef = useRef(null);
+const lstDayLayerRef = useRef(null);
+const lstNightLayerRef = useRef(null);
+const legendRef = useRef(null);
+
 
   /* ================= COLOR (QUANTILE BASED) ================= */
  const getColor = (v, breaks) => {
@@ -41,6 +46,7 @@ export default function Map() {
     const dark = L.tileLayer(
       "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
     );
+    
 
     const map = L.map("map", {
       center: [23.03, 72.58],
@@ -51,16 +57,40 @@ export default function Map() {
     mapRef.current = map;
 
     const allLayer = L.layerGroup().addTo(map);
-    const top10Layer = L.layerGroup().addTo(map);
+    const top10Layer = L.layerGroup();
 
     allLayerRef.current = allLayer;
     top10LayerRef.current = top10Layer;
 
-    L.control.layers(
-      { Street: street, Satellite: satellite, Terrain: terrain, Dark: dark },
-      { "All Wards": allLayer, "Top-10 High Priority": top10Layer },
-      { collapsed: false }
-    ).addTo(map);
+    // L.control.layers(
+    //   { Street: street, Satellite: satellite, Terrain: terrain, Dark: dark },
+    //   { "All Wards": allLayer, "Top-10 High Priority": top10Layer },
+    //   { collapsed: false }
+    // ).addTo(map);
+    const ndviLayer = L.layerGroup();
+const lstDayLayer = L.layerGroup();
+const lstNightLayer = L.layerGroup();
+
+ndviLayerRef.current = ndviLayer;
+lstDayLayerRef.current = lstDayLayer;
+lstNightLayerRef.current = lstNightLayer;
+
+L.control.layers(
+  {
+    Street: street,
+    Satellite: satellite,
+    Terrain: terrain,
+    Dark: dark,
+  },
+  {
+    "All Wards (HVI)": allLayer,
+    "Top-10 High Priority": top10Layer,
+    "NDVI (Vegetation)": ndviLayer,
+    "LST Day": lstDayLayer,
+    "LST Night": lstNightLayer,
+  },
+  { collapsed: false }
+).addTo(map);
 
     map.on("zoomend", () => toggleLabels(map));
 
@@ -161,6 +191,7 @@ export default function Map() {
         });
         l.on("click", () => handleWardClick(l, f.properties));
       },
+      
     });
 
     allLayerRef.current.addLayer(allGeo);
@@ -174,7 +205,6 @@ export default function Map() {
 
   /* ================= LEGEND ================= */
  const addLegend = (breaks) => {
-  // ✅ remove previous legend if it exists
   if (legendRef.current) {
     legendRef.current.remove();
   }
