@@ -99,7 +99,6 @@ export default function Map() {
     layer.bindPopup(`
       <b>${props.ward_name}</b><br/>
       HVI: ${props.p75.toFixed(3)}<br/>
-      Population: ${Math.round(props.population_mean).toLocaleString()}
     `).openPopup();
   };
 

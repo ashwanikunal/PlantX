@@ -110,32 +110,22 @@ def compute_priority(wards):
         .add(veg_deficit.multiply(0.15))
     ).clip(wards.geometry())
 
-    return priority,population
+    return priority
 
 # =====================================================
 # API: WARD PRIORITY (AUTO LOAD)
 # =====================================================
 @app.post("/ward-priority")
 def ward_priority():
-    priority, population = compute_priority(wards_ee)
+    priority = compute_priority(wards_ee)
 
-    combined = (
-        priority.rename("p75")   # 🔥 IMPORTANT: keep p75
-        .addBands(population.rename("population"))
-    )
-
-    out = combined.reduceRegions(
+    out = priority.reduceRegions(
         collection=wards_ee,
-        reducer=ee.Reducer.percentile([75]).combine(
-            ee.Reducer.mean(),
-            sharedInputs=True
-        ),
+        reducer=ee.Reducer.percentile([75]),
         scale=250
     )
 
     return geemap.ee_to_geojson(out)
-
-
 
 # =====================================================
 # API: AI EXPLANATION
