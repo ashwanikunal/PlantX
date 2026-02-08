@@ -13,12 +13,13 @@ export default function Map() {
   /* ================= COLOR ================= */
   const getColor = (v) => {
     v = Math.max(0, Math.min(1, v));
-    const boosted = Math.pow(v, 0.6);
-    return `rgb(${255 * boosted},${180 * (1 - boosted)},${120 *
-      (1 - boosted)})`;
+    const boosted = Math.pow(v, 0.6); // amplifies small differences
+    return `rgb(${255 * boosted}, ${180 * (1 - boosted)}, ${
+      120 * (1 - boosted)
+    })`;
   };
 
-  /* ================= INIT ================= */
+  /* ================= INIT MAP ================= */
   useEffect(() => {
     const street = L.tileLayer(
       "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -50,17 +51,11 @@ export default function Map() {
     top10LayerRef.current = top10Layer;
 
     L.control.layers(
-      {
-        Street: street,
-        Satellite: satellite,
-        Terrain: terrain,
-        Dark: dark,
-      },
+      { Street: street, Satellite: satellite, Terrain: terrain, Dark: dark },
       {
         "All Wards": allLayer,
         "Top-10 High Priority": top10Layer,
-      },
-      { collapsed: false }
+      }
     ).addTo(map);
 
     map.on("zoomend", () => toggleLabels(map));
@@ -70,10 +65,11 @@ export default function Map() {
     return () => map.remove();
   }, []);
 
-  /* ================= LABELS ================= */
+  /* ================= LABEL VISIBILITY ================= */
   const toggleLabels = (map) => {
     const zoom = map.getZoom();
     [allLayerRef.current, top10LayerRef.current].forEach((group) => {
+      if (!group) return;
       group.eachLayer((geo) =>
         geo.eachLayer((l) =>
           zoom > 12 ? l.openTooltip() : l.closeTooltip()
@@ -90,16 +86,19 @@ export default function Map() {
       });
     }
 
-    if (!layer._defaultWeight)
+    if (!layer._defaultWeight) {
       layer._defaultWeight = layer.options.weight;
+    }
 
     layer.setStyle({ weight: layer._defaultWeight + 2 });
     selectedWardRef.current = layer;
 
-    layer.bindPopup(`
-      <b>${props.ward_name}</b><br/>
-      HVI: ${props.p75.toFixed(3)}<br/>
-    `).openPopup();
+    layer
+      .bindPopup(
+        `<b>${props.ward_name}</b><br/>
+         HVI: ${props.p75.toFixed(3)}`
+      )
+      .openPopup();
   };
 
   /* ================= LOAD DATA ================= */
@@ -125,7 +124,10 @@ export default function Map() {
         fillOpacity: 0.7,
       }),
       onEachFeature: (f, l) => {
-        l.bindTooltip(f.properties.ward_name, { direction: "center" });
+        l.bindTooltip(f.properties.ward_name, {
+          direction: "center",
+          className: "ward-label",
+        });
         l.on("click", () => handleWardClick(l, f.properties));
       },
     });
@@ -137,36 +139,91 @@ export default function Map() {
         fillColor: getColor(f.properties.p75),
         fillOpacity: 0.9,
       }),
-      onEachFeature: (f, l) => {
-        l.bindTooltip(f.properties.ward_name, { direction: "center" });
-        l.on("click", () => handleWardClick(l, f.properties));
-      },
     });
 
     allLayerRef.current.addLayer(allGeo);
     top10LayerRef.current.addLayer(top10Geo);
+
     mapRef.current.fitBounds(allGeo.getBounds());
     toggleLabels(mapRef.current);
   };
 
+  /* ================= LAYOUT ================= */
   return (
-    <div style={{ width: "100%", height: "100vh", position: "relative" }}>
-      <div id="map" style={{ width: "100%", height: "100%" }} />
-
-      <button
-        onClick={() => navigate("/WardTreeTable")}
+    <div style={{ display: "flex", width: "100%", height: "100vh" }}>
+      {/* LEFT SIDEBAR */}
+      <div
         style={{
-          position: "absolute",
-          top: "200px",
-          right: "20px",
-          padding: "8px 12px",
-          background: "#2ecc71",
-          borderRadius: "6px",
-          zIndex: 1200,
+          width: "300px",
+          background: "#1f2a2e",
+          color: "#fff",
+          padding: "20px",
+          fontSize: "14px",
         }}
       >
-         Recommend Trees
-      </button>
+        
+        <p style={{ opacity: 0.85 }}>
+          This tool helps identify high-heat-risk wards and recommends tree
+          species based on environmental conditions.
+        </p>
+<div style={{ marginTop: "20px", display: "flex", flexDirection: "column", gap: "10px" }}>
+  <button
+          onClick={() => navigate("/TreesPlant")}
+          style={{
+            marginTop: "20px",
+            padding: "10px",
+            width: "100%",
+            background: "#2ecc71",
+            border: "none",
+            borderRadius: "6px",
+            cursor: "pointer",
+            fontWeight: "bold",
+          }}
+        >
+    Free / Open area to plant
+  </button>
+
+ <button
+          onClick={() => navigate("/WardTreeTable")}
+          style={{
+            marginTop: "20px",
+            padding: "10px",
+            width: "100%",
+            background: "#2ecc71",
+            border: "none",
+            borderRadius: "6px",
+            cursor: "pointer",
+            fontWeight: "bold",
+          }}
+        >
+ Recommend trees
+  </button>
+
+  <button
+          onClick={() => navigate("/WardTreeTable")}
+          style={{
+            marginTop: "20px",
+            padding: "10px",
+            width: "100%",
+            background: "#2ecc71",
+            border: "none",
+            borderRadius: "6px",
+            cursor: "pointer",
+            fontWeight: "bold",
+          }}
+        >
+    Maintain tree health
+  </button>
+</div>
+
+        
+        
+      </div>
+
+      {/* MAP */}
+      <div style={{ flex: 1 }}>
+        <div id="map" style={{ width: "100%", height: "100%" }} />
+      </div>
     </div>
   );
 }

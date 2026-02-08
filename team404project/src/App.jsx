@@ -8,6 +8,7 @@ import "./index.css";
 import Timeline from "../pages/timeline";
 import Map from "../pages/Map";
 import WardTreeTable from "../pages/WardTreeTable";
+import TreesPlant from "../pages/TreesPlant";
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
           <Route path='/Calender' element={<Calender />} />
           <Route path='/Map' element={<Map />} />
           <Route path='/WardTreeTable' element={<WardTreeTable />} />
+          <Route path='/TreesPlant' element={<TreesPlant />} />
         </Route>
 
       </Routes>
