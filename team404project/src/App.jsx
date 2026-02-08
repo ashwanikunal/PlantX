@@ -3,7 +3,7 @@ import Layout from "./Layout";
 import HomePage from "../pages/HomePage";
 import MapPage from "../pages/MapPage";
 import Login from "../pages/Login";
-import timeline from "../pages/timeline";
+import Timeline from "../pages/Timeline";
 import "./index.css";
 function App() {
   return (
@@ -13,7 +13,7 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/MapPage" element={<MapPage />} />
-          <Route path='/timeline' element={<timeline />} />
+          <Route path='/Timeline' element={<Timeline />} />
         </Route>
       </Routes>
     </BrowserRouter>
